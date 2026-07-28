@@ -5,6 +5,7 @@ import { initCommand } from "./init";
 import { listCommand } from "./list";
 import { removeCommand } from "./remove";
 import { resolveCommand } from "./resolve";
+import { updateCommand } from "./update";
 import { verifyCommand } from "./verify";
 import { whyCommand } from "./why";
 
@@ -14,6 +15,7 @@ export const commandRegistrars: CommandRegistrar[] = [
   addCommand,
   removeCommand,
   resolveCommand,
+  updateCommand,
   verifyCommand,
   diffCommand,
   whyCommand,
