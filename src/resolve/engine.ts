@@ -13,7 +13,7 @@
  */
 import { createAuthProvider } from "../auth/provider";
 import { msToIso, type Clock } from "../core/clock";
-import { hashTool } from "../core/hash";
+import { hashTool, type ToolHashes } from "../core/hash";
 import { McpClient, type ListToolsResult } from "../mcp/client";
 import {
   parseLockfile,
@@ -118,7 +118,7 @@ function nearMisses(target: string, candidates: string[]): string[] {
     .map((entry) => entry.name);
 }
 
-function makeDefaultLister(
+export function defaultToolLister(
   env: Record<string, string | undefined>,
   timeoutMs: number | undefined,
 ): ToolLister {
@@ -130,6 +130,27 @@ function makeDefaultLister(
     });
     return client.listTools();
   };
+}
+
+interface FetchContext {
+  env: Record<string, string | undefined>;
+  clock: Clock;
+  cwd: string;
+}
+
+/** Build a source's auth provider, then list its live tools. */
+async function fetchSource(
+  source: Source,
+  sourceName: string,
+  ctx: FetchContext,
+  listTools: ToolLister,
+): Promise<ListToolsResult> {
+  const provider = createAuthProvider(source.auth, {
+    clock: ctx.clock,
+    repoRoot: ctx.cwd,
+  });
+  const authHeaders = await provider.headers({ sourceName, env: ctx.env });
+  return listTools(source, authHeaders);
 }
 
 function groupBySource(tools: Tool[]): Map<string, Tool[]> {
@@ -146,7 +167,7 @@ function groupBySource(tools: Tool[]): Map<string, Tool[]> {
 export async function resolve(options: ResolveOptions): Promise<ResolveResult> {
   const { manifest, env, clock, cwd, generatedBy } = options;
   const listTools =
-    options.listTools ?? makeDefaultLister(env, options.timeoutMs);
+    options.listTools ?? defaultToolLister(env, options.timeoutMs);
   const resolvedAt = msToIso(clock());
   const warnings: string[] = [];
   const tools: Record<string, LockedTool> = {};
@@ -156,12 +177,12 @@ export async function resolve(options: ResolveOptions): Promise<ResolveResult> {
   for (const [sourceName, declared] of groupBySource(manifest.tools)) {
     // Non-null: manifest validation guarantees every tool.source is declared.
     const source = sourceByName.get(sourceName)!;
-    const provider = createAuthProvider(source.auth, {
-      clock,
-      repoRoot: cwd,
-    });
-    const authHeaders = await provider.headers({ sourceName, env });
-    const live = await listTools(source, authHeaders);
+    const live = await fetchSource(
+      source,
+      sourceName,
+      { env, clock, cwd },
+      listTools,
+    );
 
     const liveByName = new Map(live.tools.map((t) => [t.name, t]));
     const declaredNames = new Set(declared.map((t) => t.name));
@@ -204,4 +225,58 @@ export async function resolve(options: ResolveOptions): Promise<ResolveResult> {
 
   const lockfile = parseLockfile({ schemaVersion: 1, generatedBy, tools });
   return { lockfile, warnings };
+}
+
+export interface LiveToolInfo {
+  hashes: ToolHashes;
+  source: string;
+  version?: string;
+}
+
+export interface CollectLiveOptions {
+  manifest: Manifest;
+  env: Record<string, string | undefined>;
+  clock: Clock;
+  cwd: string;
+  listTools?: ToolLister;
+  timeoutMs?: number;
+}
+
+/**
+ * Fetch the live tool hashes across every source that declares tools, keyed by
+ * tool name. Used by `list` (and later `verify`) to classify drift against the
+ * lockfile without writing anything.
+ */
+export async function collectLiveTools(
+  options: CollectLiveOptions,
+): Promise<Map<string, LiveToolInfo>> {
+  const listTools =
+    options.listTools ?? defaultToolLister(options.env, options.timeoutMs);
+  const ctx: FetchContext = {
+    env: options.env,
+    clock: options.clock,
+    cwd: options.cwd,
+  };
+  const sourceByName = new Map(
+    options.manifest.sources.map((s) => [s.name, s]),
+  );
+  const live = new Map<string, LiveToolInfo>();
+
+  for (const sourceName of new Set(
+    options.manifest.tools.map((t) => t.source),
+  )) {
+    // Non-null: manifest validation guarantees every tool.source is declared.
+    const source = sourceByName.get(sourceName)!;
+    const result = await fetchSource(source, sourceName, ctx, listTools);
+    for (const tool of result.tools) {
+      live.set(tool.name, {
+        hashes: hashTool(tool),
+        source: sourceName,
+        ...(result.serverVersion !== undefined && {
+          version: result.serverVersion,
+        }),
+      });
+    }
+  }
+  return live;
 }
