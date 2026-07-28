@@ -9,3 +9,6 @@ pnpm-lock.yaml
 
 # Test fixtures are shaped by hand (some deliberately malformed) — leave as-is.
 test/fixtures/
+
+# Vitest snapshots are machine-generated.
+**/__snapshots__/
