@@ -33,6 +33,20 @@ export interface FixtureOptions {
   pageSize?: number;
 }
 
+/** Fault-injection knobs for client/DAST tests. */
+export interface FixtureFaults {
+  /** Milliseconds to delay each response — drives timeout tests. */
+  delayMs: number;
+  /** Emit invalid JSON with a 200 — drives malformed-response tests. */
+  malformed: boolean;
+  /** Response transport: single JSON, or an SSE data frame. */
+  responseMode: "json" | "sse";
+  /** Override the HTTP status of responses (e.g. 503). */
+  statusOverride?: number;
+  /** Return a JSON-RPC error from `tools/list`. */
+  listError?: { code: number; message: string };
+}
+
 interface JsonRpcRequest {
   jsonrpc: "2.0";
   id?: string | number | null;
@@ -84,6 +98,11 @@ export class McpFixtureServer {
   private serverVersion: string;
   private pageSize: number;
   private requests = 0;
+  private readonly faults: FixtureFaults = {
+    delayMs: 0,
+    malformed: false,
+    responseMode: "json",
+  };
 
   private constructor(server: Server, options: FixtureOptions) {
     this.server = server;
@@ -129,6 +148,11 @@ export class McpFixtureServer {
     this.pageSize = pageSize;
   }
 
+  /** Inject transport faults for client/DAST tests. */
+  setFaults(faults: Partial<FixtureFaults>): void {
+    Object.assign(this.faults, faults);
+  }
+
   close(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.server.close((err) => (err ? reject(err) : resolve()));
@@ -167,7 +191,16 @@ export class McpFixtureServer {
         res.end();
         return;
       case "tools/list":
-        this.sendResult(res, message.id, this.listTools(message.params));
+        if (this.faults.listError) {
+          this.sendError(
+            res,
+            message.id ?? null,
+            this.faults.listError.code,
+            this.faults.listError.message,
+          );
+        } else {
+          this.sendResult(res, message.id, this.listTools(message.params));
+        }
         return;
       default:
         this.sendError(
@@ -212,7 +245,33 @@ export class McpFixtureServer {
   }
 
   private sendJson(res: ServerResponse, payload: unknown): void {
-    res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify(payload));
+    const emit = (): void => {
+      if (res.writableEnded || res.destroyed) {
+        return;
+      }
+      try {
+        const status = this.faults.statusOverride ?? 200;
+        if (this.faults.malformed) {
+          res.writeHead(status, { "content-type": "application/json" });
+          res.end("{ not json");
+          return;
+        }
+        if (this.faults.responseMode === "sse") {
+          res.writeHead(status, { "content-type": "text/event-stream" });
+          res.end(`event: message\ndata: ${JSON.stringify(payload)}\n\n`);
+          return;
+        }
+        res.writeHead(status, { "content-type": "application/json" });
+        res.end(JSON.stringify(payload));
+      } catch {
+        // Client went away (e.g. timed out and aborted) — nothing to do.
+      }
+    };
+
+    if (this.faults.delayMs > 0) {
+      setTimeout(emit, this.faults.delayMs).unref();
+    } else {
+      emit();
+    }
   }
 }
