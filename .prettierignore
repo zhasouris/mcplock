@@ -1,0 +1,14 @@
+dist/
+coverage/
+node_modules/
+.pnpm-store/
+pnpm-lock.yaml
+
+# Prose/docs are hand-formatted (spec tables are normative) — not prettier-governed.
+*.md
+
+# Test fixtures are shaped by hand (some deliberately malformed) — leave as-is.
+test/fixtures/
+
+# Vitest snapshots are machine-generated.
+**/__snapshots__/

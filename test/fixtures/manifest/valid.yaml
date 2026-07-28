@@ -1,0 +1,22 @@
+version: 1
+sources:
+  - name: contracts-api
+    type: direct
+    url: https://mcp.internal.example/contracts
+    auth: oidc
+    headers:
+      X-Api-Key: ${env:CONTRACTS_KEY}
+  # omits type + auth to exercise defaults (direct / none)
+  - name: billing-api
+    url: https://mcp.internal.example/billing
+tools:
+  - name: contracts.list_expiring
+    source: contracts-api
+    constraint: "^2"
+  # omits constraint to exercise the "*" default
+  - name: billing.get_invoice
+    source: billing-api
+codegen:
+  target: typescript
+  output: ./generated
+  namespace: acme/agents

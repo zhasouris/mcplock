@@ -1,0 +1,132 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildDriftReport > produces a snapshot-stable document 1`] = `
+{
+  "generatedAt": "2026-07-28T14:00:00Z",
+  "items": [
+    {
+      "changes": [],
+      "class": "missing",
+      "fingerprint": "041be204c84bd8bd",
+      "locked": {
+        "schemaHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "semanticHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      },
+      "markdown": "### \`billing.get_invoice\` — missing
+- **Source:** billing-api
+- **Fingerprint:** \`041be204c84bd8bd\`
+- Locked but no longer offered by the server.",
+      "source": "billing-api",
+      "tool": "billing.get_invoice",
+    },
+    {
+      "changes": [],
+      "class": "undeclared",
+      "fingerprint": "cfda92e7f9341f98",
+      "live": {
+        "schemaHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "semanticHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      },
+      "markdown": "### \`billing.list_new\` — undeclared
+- **Source:** billing-api
+- **Fingerprint:** \`cfda92e7f9341f98\`
+- Offered by the server but not pinned.",
+      "source": "billing-api",
+      "tool": "billing.list_new",
+    },
+    {
+      "changes": [],
+      "class": "semantic",
+      "fingerprint": "f134c1d1573a4663",
+      "live": {
+        "schemaHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "semanticHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      },
+      "locked": {
+        "schemaHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "semanticHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      },
+      "markdown": "### \`contracts.get_summary\` — semantic drift
+- **Source:** contracts-api
+- **Fingerprint:** \`f134c1d1573a4663\`
+- **Semantic hash:** \`sha256:aaaaaaaaaaaa…\` → \`sha256:bbbbbbbbbbbb…\`
+- Description or annotations changed; schema unchanged.",
+      "source": "contracts-api",
+      "tool": "contracts.get_summary",
+    },
+    {
+      "changes": [],
+      "class": "structural",
+      "fingerprint": "120a0153721f5797",
+      "live": {
+        "schemaHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "semanticHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "version": "2.2.0",
+      },
+      "locked": {
+        "schemaHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "semanticHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "version": "2.1.0",
+      },
+      "markdown": "### \`contracts.list_expiring\` — structural drift
+- **Source:** contracts-api
+- **Fingerprint:** \`120a0153721f5797\`
+- **Schema hash:** \`sha256:aaaaaaaaaaaa…\` → \`sha256:cccccccccccc…\`",
+      "source": "contracts-api",
+      "tool": "contracts.list_expiring",
+    },
+  ],
+  "manifest": "mcp-tools.yaml",
+  "schemaVersion": 1,
+  "summary": {
+    "missing": 1,
+    "resolutionErrors": 0,
+    "semantic": 1,
+    "structural": 1,
+    "undeclared": 1,
+  },
+}
+`;
+
+exports[`renderItemMarkdown > renders a structural item 1`] = `
+"### \`contracts.list_expiring\` — structural drift
+- **Source:** contracts-api
+- **Fingerprint:** \`120a0153721f5797\`
+- **Schema hash:** \`sha256:aaaaaaaaaaaa…\` → \`sha256:cccccccccccc…\`"
+`;
+
+exports[`renderItemMarkdown > renders changes when present 1`] = `
+"### \`t\` — structural drift
+- **Source:** s
+- **Fingerprint:** \`0123456789abcdef\`
+- **Schema hash:** \`sha256:aaaaaaaaaaaa…\` → \`sha256:cccccccccccc…\`
+  - \`inputSchema.properties.window\`: type-changed (\`"string"\` → \`"integer"\`)"
+`;
+
+exports[`renderReportMarkdown > renders the full report 1`] = `
+"# Drift report
+
+1 structural, 1 semantic, 1 missing, 1 undeclared
+
+### \`billing.get_invoice\` — missing
+- **Source:** billing-api
+- **Fingerprint:** \`041be204c84bd8bd\`
+- Locked but no longer offered by the server.
+
+### \`billing.list_new\` — undeclared
+- **Source:** billing-api
+- **Fingerprint:** \`cfda92e7f9341f98\`
+- Offered by the server but not pinned.
+
+### \`contracts.get_summary\` — semantic drift
+- **Source:** contracts-api
+- **Fingerprint:** \`f134c1d1573a4663\`
+- **Semantic hash:** \`sha256:aaaaaaaaaaaa…\` → \`sha256:bbbbbbbbbbbb…\`
+- Description or annotations changed; schema unchanged.
+
+### \`contracts.list_expiring\` — structural drift
+- **Source:** contracts-api
+- **Fingerprint:** \`120a0153721f5797\`
+- **Schema hash:** \`sha256:aaaaaaaaaaaa…\` → \`sha256:cccccccccccc…\`
+"
+`;

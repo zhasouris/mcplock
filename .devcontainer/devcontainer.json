@@ -1,0 +1,8 @@
+{
+  "name": "mcplock",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "dev",
+  "workspaceFolder": "/app",
+  "overrideCommand": true,
+  "postCreateCommand": "pnpm install"
+}
