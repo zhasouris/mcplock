@@ -13,8 +13,15 @@
  * The oauth provider is a token *consumer*, not a broker: a fetched token is
  * only ever used for this source's own `tools/list`, never handed out.
  */
-import { systemClock, type Clock } from "../core/clock";
-import type { AuthSpec, OAuthConfig } from "./config";
+import { spawn } from "node:child_process";
+import {
+  isAbsolute,
+  relative as relativePath,
+  resolve as resolvePath,
+} from "node:path";
+
+import { parseIsoToMs, systemClock, type Clock } from "../core/clock";
+import type { AuthSpec, ExecConfig, OAuthConfig } from "./config";
 
 /** Per-source context for computing auth headers. */
 export interface AuthContext {
@@ -271,13 +278,155 @@ export class OAuthProvider implements AuthProvider {
   }
 }
 
+/** Runs an exec-credential command; injected so tests never spawn processes. */
+export type ExecRunner = (
+  command: string,
+  args: string[],
+  options: { cwd: string },
+) => Promise<{ stdout: string; exitCode: number }>;
+
+/* c8 ignore start -- thin child_process wrapper; a repo-relative executable
+   cannot be hosted hermetically on the Windows-mounted dev FS (no +x bit), so
+   this is exercised via injected-runner tests, not unit coverage. */
+const spawnRunner: ExecRunner = (command, args, options) =>
+  new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: options.cwd,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    child.stdout.on("data", (chunk: Buffer) => {
+      stdout += chunk.toString("utf8");
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      resolve({ stdout, exitCode: code ?? 0 });
+    });
+  });
+/* c8 ignore stop */
+
+interface ExecCredential {
+  token: string;
+  expiresAtMs: number;
+}
+
+function parseExecCredential(
+  stdout: string,
+  sourceName: string,
+): ExecCredential {
+  let data: unknown;
+  try {
+    data = JSON.parse(stdout);
+  } catch {
+    throw new AuthError(
+      `exec auth for "${sourceName}" printed invalid JSON on stdout`,
+    );
+  }
+  if (data === null || typeof data !== "object") {
+    throw new AuthError(
+      `exec auth for "${sourceName}" output was not an object`,
+    );
+  }
+  const credential = data as { token?: unknown; expiresAt?: unknown };
+  if (typeof credential.token !== "string" || credential.token === "") {
+    throw new AuthError(`exec auth for "${sourceName}" output had no token`);
+  }
+  // expiresAt is optional; without it the token is never cached.
+  const expiresAtMs =
+    typeof credential.expiresAt === "string"
+      ? (parseIsoToMs(credential.expiresAt) ?? 0)
+      : 0;
+  return { token: credential.token, expiresAtMs };
+}
+
+/**
+ * kubectl-style exec credential (COMMAND_SPEC §8). Runs a repo-relative command
+ * that prints `{ token, expiresAt }`; absolute paths, $PATH lookup, and repo
+ * escape are rejected.
+ */
+export class ExecProvider implements AuthProvider {
+  readonly type = "exec";
+  private cached: CachedToken | undefined;
+
+  constructor(
+    private readonly config: ExecConfig,
+    private readonly clock: Clock,
+    private readonly repoRoot: string,
+    private readonly runner: ExecRunner,
+  ) {}
+
+  async headers(context: AuthContext): Promise<Record<string, string>> {
+    return { Authorization: `Bearer ${await this.token(context)}` };
+  }
+
+  private async token(context: AuthContext): Promise<string> {
+    const now = this.clock();
+    const cached = this.cached;
+    if (
+      cached !== undefined &&
+      cached.expiresAtMs - OAUTH_EXPIRY_SKEW_MS > now
+    ) {
+      return cached.accessToken;
+    }
+    const command = this.resolveCommand(context.sourceName);
+    let result: { stdout: string; exitCode: number };
+    try {
+      result = await this.runner(command, this.config.args ?? [], {
+        cwd: this.repoRoot,
+      });
+    } catch (cause) {
+      throw new AuthError(
+        `exec auth for "${context.sourceName}" could not run ${this.config.command}`,
+        { cause },
+      );
+    }
+    if (result.exitCode !== 0) {
+      throw new AuthError(
+        `exec auth for "${context.sourceName}" exited with code ${String(result.exitCode)}`,
+      );
+    }
+    const credential = parseExecCredential(result.stdout, context.sourceName);
+    this.cached = {
+      accessToken: credential.token,
+      expiresAtMs: credential.expiresAtMs,
+    };
+    return credential.token;
+  }
+
+  private resolveCommand(sourceName: string): string {
+    const command = this.config.command;
+    if (isAbsolute(command)) {
+      throw new AuthError(
+        `exec auth for "${sourceName}" command must be repo-relative, not absolute: ${command}`,
+      );
+    }
+    const resolved = resolvePath(this.repoRoot, command);
+    const rel = relativePath(this.repoRoot, resolved);
+    if (rel.startsWith("..") || isAbsolute(rel)) {
+      throw new AuthError(
+        `exec auth for "${sourceName}" command escapes the repo: ${command}`,
+      );
+    }
+    return resolved;
+  }
+}
+
 /** Build the provider for a source's declared auth (COMMAND_SPEC §8). */
 export function createAuthProvider(
   auth: AuthSpec,
-  options: { clock?: Clock } = {},
+  options: { clock?: Clock; repoRoot?: string; execRunner?: ExecRunner } = {},
 ): AuthProvider {
+  const clock = options.clock ?? systemClock;
   if (typeof auth === "object") {
-    return new OAuthProvider(auth, options.clock ?? systemClock);
+    if (auth.type === "exec") {
+      return new ExecProvider(
+        auth,
+        clock,
+        options.repoRoot ?? process.cwd(),
+        options.execRunner ?? spawnRunner,
+      );
+    }
+    return new OAuthProvider(auth, clock);
   }
   switch (auth) {
     case "none":

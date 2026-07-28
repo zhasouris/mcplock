@@ -86,6 +86,15 @@ describe("parseManifest", () => {
     expect(() => parseManifest(raw)).not.toThrow();
   });
 
+  it("accepts a repo-relative exec auth command", () => {
+    const raw = baseManifest() as { sources: Record<string, unknown>[] };
+    raw.sources[0]!.auth = {
+      type: "exec",
+      command: "scripts/get-token.sh",
+    };
+    expect(() => parseManifest(raw)).not.toThrow();
+  });
+
   describe("rejects", () => {
     it("an oauth auth object missing tokenUrl", () => {
       const raw = baseManifest() as { sources: Record<string, unknown>[] };
@@ -104,6 +113,18 @@ describe("parseManifest", () => {
         clientId: "cid",
         oops: true,
       };
+      expect(() => parseManifest(raw)).toThrow(ManifestError);
+    });
+
+    it("an absolute exec command", () => {
+      const raw = baseManifest() as { sources: Record<string, unknown>[] };
+      raw.sources[0]!.auth = { type: "exec", command: "/usr/bin/get-token" };
+      expect(() => parseManifest(raw)).toThrow(ManifestError);
+    });
+
+    it("a bare exec command ($PATH lookup)", () => {
+      const raw = baseManifest() as { sources: Record<string, unknown>[] };
+      raw.sources[0]!.auth = { type: "exec", command: "get-token" };
       expect(() => parseManifest(raw)).toThrow(ManifestError);
     });
 
