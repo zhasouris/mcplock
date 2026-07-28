@@ -6,6 +6,7 @@ import { listCommand } from "./list";
 import { removeCommand } from "./remove";
 import { resolveCommand } from "./resolve";
 import { verifyCommand } from "./verify";
+import { whyCommand } from "./why";
 
 /** The registered command set, in help-listing order. */
 export const commandRegistrars: CommandRegistrar[] = [
@@ -15,5 +16,6 @@ export const commandRegistrars: CommandRegistrar[] = [
   resolveCommand,
   verifyCommand,
   diffCommand,
+  whyCommand,
   listCommand,
 ];
