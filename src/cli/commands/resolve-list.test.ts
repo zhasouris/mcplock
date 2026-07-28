@@ -140,6 +140,43 @@ describe("resolve", () => {
   });
 });
 
+describe("resolve --frozen", () => {
+  async function pin(): Promise<void> {
+    writeManifest(
+      [{ name: "src", url: fixture.url }],
+      [{ name: "a.tool", source: "src" }],
+    );
+    fixture.setTools([{ name: "a.tool", inputSchema: { type: "object" } }]);
+    await run([...globals(), "resolve"], io());
+  }
+
+  it("exits 0 and writes nothing when up to date", async () => {
+    await pin();
+    const before = lockfileBytes();
+    expect(await run([...globals(), "resolve", "--frozen"], io())).toBe(0);
+    expect(lockfileBytes()).toBe(before);
+  });
+
+  it("exits 1 and writes nothing when resolution would change", async () => {
+    await pin();
+    const before = lockfileBytes();
+    fixture.setTools([
+      { name: "a.tool", inputSchema: { type: "object", required: ["x"] } },
+    ]);
+    expect(await run([...globals(), "resolve", "--frozen"], io())).toBe(1);
+    expect(lockfileBytes()).toBe(before);
+  });
+
+  it("exits 1 when there is no lockfile", async () => {
+    writeManifest(
+      [{ name: "src", url: fixture.url }],
+      [{ name: "a.tool", source: "src" }],
+    );
+    fixture.setTools([{ name: "a.tool" }]);
+    expect(await run([...globals(), "resolve", "--frozen"], io())).toBe(1);
+  });
+});
+
 describe("list", () => {
   async function resolved(): Promise<void> {
     writeManifest(
