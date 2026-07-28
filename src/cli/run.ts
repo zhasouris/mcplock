@@ -10,6 +10,7 @@ import { Command, CommanderError } from "commander";
 
 import type { Clock } from "../core/clock";
 import { VERSION } from "../version";
+import { commandRegistrars } from "./commands";
 import { EXIT, exitCodeFor } from "./errors";
 
 /** Global option defaults (COMMAND_SPEC §2). */
@@ -28,8 +29,8 @@ export interface CliIo {
 /** Registers one or more commands onto the root program. */
 export type CommandRegistrar = (program: Command, io: CliIo) => void;
 
-/** The real command set — grows as commands land (init/add/... in later commits). */
-export const DEFAULT_REGISTRARS: CommandRegistrar[] = [];
+/** The real command set (init/add/remove now; resolve/list/... land next). */
+export const DEFAULT_REGISTRARS: CommandRegistrar[] = commandRegistrars;
 
 export function buildProgram(
   io: CliIo,

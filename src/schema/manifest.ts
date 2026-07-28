@@ -63,7 +63,8 @@ const CodegenSchema = z
 export const ManifestSchema = z
   .object({
     version: z.literal(1),
-    sources: z.array(SourceSchema).min(1, "at least one source is required"),
+    // Empty is allowed: a freshly `init`-ed manifest has no sources yet.
+    sources: z.array(SourceSchema).default([]),
     tools: z.array(ToolSchema).default([]),
     codegen: CodegenSchema.optional(),
   })

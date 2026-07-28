@@ -63,6 +63,12 @@ describe("parseManifest", () => {
     expect(manifest.tools).toEqual([]);
   });
 
+  it("accepts an empty manifest (no sources, no tools — the init state)", () => {
+    expect(() =>
+      parseManifest({ version: 1, sources: [], tools: [] }),
+    ).not.toThrow();
+  });
+
   it("accepts ${env:VAR} header values", () => {
     const raw = baseManifest() as { sources: { headers?: unknown }[] };
     raw.sources[0]!.headers = { Authorization: "${env:TOKEN}" };
@@ -132,12 +138,6 @@ describe("parseManifest", () => {
       const raw = baseManifest() as Record<string, unknown>;
       raw.version = 2;
       expect(() => parseManifest(raw)).toThrow(ManifestError);
-    });
-
-    it("empty sources", () => {
-      const raw = baseManifest() as Record<string, unknown>;
-      raw.sources = [];
-      expect(() => parseManifest(raw)).toThrow(/at least one source/);
     });
 
     it("an unknown top-level key", () => {
