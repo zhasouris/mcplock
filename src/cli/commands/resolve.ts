@@ -4,9 +4,42 @@ import { resolve } from "../../resolve/engine";
 import { parseLockfile, type Lockfile } from "../../schema/lockfile";
 import { loadManifest, type Manifest } from "../../schema/manifest";
 import { VERSION } from "../../version";
-import { UsageError } from "../errors";
+import { EXIT, ExitError, UsageError } from "../errors";
 import { loadLockfile, writeLockfile } from "../files";
 import type { CliIo, CommandRegistrar } from "../run";
+
+/** Whether a fresh resolution differs meaningfully from the lockfile (ignores resolvedAt). */
+function frozenDiffers(
+  existing: Lockfile | undefined,
+  next: Lockfile,
+): boolean {
+  if (existing === undefined) {
+    return true;
+  }
+  const names = new Set([
+    ...Object.keys(existing.tools),
+    ...Object.keys(next.tools),
+  ]);
+  for (const name of names) {
+    const a = existing.tools[name];
+    const b = next.tools[name];
+    if (a === undefined || b === undefined) {
+      return true;
+    }
+    if (
+      a.source !== b.source ||
+      a.resolvedServer !== b.resolvedServer ||
+      a.serverVersion !== b.serverVersion ||
+      a.schemaHash !== b.schemaHash ||
+      a.semanticHash !== b.semanticHash ||
+      JSON.stringify(a.scopes) !== JSON.stringify(b.scopes) ||
+      JSON.stringify(a.forwardChain) !== JSON.stringify(b.forwardChain)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
 
 async function resolveAll(
   manifest: Manifest,
@@ -52,6 +85,10 @@ export const resolveCommand: CommandRegistrar = (program, io) => {
   program
     .command("resolve")
     .description("Resolve every source and write the lockfile.")
+    .option(
+      "--frozen",
+      "Write nothing; exit 1 if resolution would change the lockfile",
+    )
     .option("--source <name>", "Restrict to one source")
     .option("--no-generate", "Lockfile only")
     .option("--json", "Machine-readable resolution report on stdout")
@@ -60,6 +97,7 @@ export const resolveCommand: CommandRegistrar = (program, io) => {
       const manifestPath = String(opts.manifest);
       const lockfilePath = String(opts.lockfile);
       const json = opts.json === true;
+      const frozen = opts.frozen === true;
       const source =
         opts.source !== undefined ? String(opts.source) : undefined;
 
@@ -68,6 +106,17 @@ export const resolveCommand: CommandRegistrar = (program, io) => {
         source !== undefined
           ? await resolveOneSource(manifest, source, lockfilePath, io)
           : await resolveAll(manifest, io);
+
+      if (frozen) {
+        if (frozenDiffers(loadLockfile(lockfilePath), lockfile)) {
+          throw new ExitError(
+            EXIT.STRUCTURAL,
+            "resolution differs from the lockfile (run `mcplock resolve` to update)",
+          );
+        }
+        io.out("resolve --frozen: up to date");
+        return;
+      }
 
       writeLockfile(lockfilePath, lockfile);
 

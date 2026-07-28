@@ -35,3 +35,7 @@ export function loadLockfile(path: string): Lockfile | undefined {
   }
   return parseLockfileText(readFileSync(path, "utf8"));
 }
+
+export function writeTextFile(path: string, text: string): void {
+  writeFileSync(path, text, "utf8");
+}

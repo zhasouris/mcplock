@@ -227,6 +227,20 @@ export async function resolve(options: ResolveOptions): Promise<ResolveResult> {
   return { lockfile, warnings };
 }
 
+/** Extract the locked structural/semantic hashes per tool from a lockfile. */
+export function lockedToolHashes(
+  lockfile: Lockfile,
+): Record<string, ToolHashes> {
+  const hashes: Record<string, ToolHashes> = {};
+  for (const [name, entry] of Object.entries(lockfile.tools)) {
+    hashes[name] = {
+      schemaHash: entry.schemaHash,
+      semanticHash: entry.semanticHash,
+    };
+  }
+  return hashes;
+}
+
 export interface LiveToolInfo {
   hashes: ToolHashes;
   source: string;
