@@ -2,23 +2,12 @@ import type { Command } from "commander";
 
 import { classifyDrift } from "../../core/drift";
 import type { ToolHashes } from "../../core/hash";
-import { collectLiveTools } from "../../resolve/engine";
+import { collectLiveTools, lockedToolHashes } from "../../resolve/engine";
 import type { Lockfile } from "../../schema/lockfile";
 import { loadManifest } from "../../schema/manifest";
 import { EXIT, ExitError } from "../errors";
 import { loadLockfile } from "../files";
 import type { CliIo, CommandRegistrar } from "../run";
-
-function lockedHashes(lockfile: Lockfile): Record<string, ToolHashes> {
-  const hashes: Record<string, ToolHashes> = {};
-  for (const [name, entry] of Object.entries(lockfile.tools)) {
-    hashes[name] = {
-      schemaHash: entry.schemaHash,
-      semanticHash: entry.semanticHash,
-    };
-  }
-  return hashes;
-}
 
 function listOffline(lockfile: Lockfile, json: boolean, io: CliIo): void {
   const rows = Object.entries(lockfile.tools)
@@ -57,7 +46,7 @@ async function listLive(
   for (const [name, info] of live) {
     liveHashes[name] = info.hashes;
   }
-  const report = classifyDrift(lockedHashes(lockfile), liveHashes);
+  const report = classifyDrift(lockedToolHashes(lockfile), liveHashes);
   if (json) {
     io.out(
       JSON.stringify(
