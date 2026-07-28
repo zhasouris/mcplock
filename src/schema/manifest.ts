@@ -10,6 +10,8 @@ import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
+import { AuthSpecSchema } from "../auth/config";
+
 /** `sources[].name` — unique, `[a-z0-9-]+` (COMMAND_SPEC §5.1). */
 const SOURCE_NAME = /^[a-z0-9-]+$/;
 
@@ -18,15 +20,6 @@ const SOURCE_NAME = /^[a-z0-9-]+$/;
  * rejected so credentials never live in the manifest (COMMAND_SPEC §5.1, §8).
  */
 const ENV_INTERPOLATION = /^\$\{env:[A-Za-z_][A-Za-z0-9_]*\}$/;
-
-/** Auth provider types (COMMAND_SPEC §8). Per-provider config lands in Phase 2. */
-export const AuthType = z.enum([
-  "none",
-  "bearer-env",
-  "oauth-client-credentials",
-  "oidc",
-  "exec",
-]);
 
 /** `registry` is reserved (COMMAND_SPEC §10) — accepted by the schema, errors at use. */
 const SourceType = z.enum(["direct", "registry"]);
@@ -45,7 +38,7 @@ const SourceSchema = z
     name: z.string().regex(SOURCE_NAME, "source name must match [a-z0-9-]+"),
     type: SourceType.default("direct"),
     url: z.string().url("source url must be a valid URL"),
-    auth: AuthType.default("none"),
+    auth: AuthSpecSchema.default("none"),
     headers: z.record(HeaderValue).optional(),
   })
   .strict();
@@ -70,7 +63,8 @@ const CodegenSchema = z
 export const ManifestSchema = z
   .object({
     version: z.literal(1),
-    sources: z.array(SourceSchema).min(1, "at least one source is required"),
+    // Empty is allowed: a freshly `init`-ed manifest has no sources yet.
+    sources: z.array(SourceSchema).default([]),
     tools: z.array(ToolSchema).default([]),
     codegen: CodegenSchema.optional(),
   })

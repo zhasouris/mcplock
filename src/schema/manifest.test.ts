@@ -63,6 +63,12 @@ describe("parseManifest", () => {
     expect(manifest.tools).toEqual([]);
   });
 
+  it("accepts an empty manifest (no sources, no tools — the init state)", () => {
+    expect(() =>
+      parseManifest({ version: 1, sources: [], tools: [] }),
+    ).not.toThrow();
+  });
+
   it("accepts ${env:VAR} header values", () => {
     const raw = baseManifest() as { sources: { headers?: unknown }[] };
     raw.sources[0]!.headers = { Authorization: "${env:TOKEN}" };
@@ -75,17 +81,63 @@ describe("parseManifest", () => {
     expect(() => parseManifest(raw)).not.toThrow();
   });
 
+  it("accepts the oauth-client-credentials object auth form", () => {
+    const raw = baseManifest() as { sources: Record<string, unknown>[] };
+    raw.sources[0]!.auth = {
+      type: "oauth-client-credentials",
+      tokenUrl: "https://login.example.com/token",
+      clientId: "cid",
+      assertion: "oidc",
+    };
+    expect(() => parseManifest(raw)).not.toThrow();
+  });
+
+  it("accepts a repo-relative exec auth command", () => {
+    const raw = baseManifest() as { sources: Record<string, unknown>[] };
+    raw.sources[0]!.auth = {
+      type: "exec",
+      command: "scripts/get-token.sh",
+    };
+    expect(() => parseManifest(raw)).not.toThrow();
+  });
+
   describe("rejects", () => {
+    it("an oauth auth object missing tokenUrl", () => {
+      const raw = baseManifest() as { sources: Record<string, unknown>[] };
+      raw.sources[0]!.auth = {
+        type: "oauth-client-credentials",
+        clientId: "cid",
+      };
+      expect(() => parseManifest(raw)).toThrow(ManifestError);
+    });
+
+    it("an oauth auth object with an unknown key", () => {
+      const raw = baseManifest() as { sources: Record<string, unknown>[] };
+      raw.sources[0]!.auth = {
+        type: "oauth-client-credentials",
+        tokenUrl: "https://login.example.com/token",
+        clientId: "cid",
+        oops: true,
+      };
+      expect(() => parseManifest(raw)).toThrow(ManifestError);
+    });
+
+    it("an absolute exec command", () => {
+      const raw = baseManifest() as { sources: Record<string, unknown>[] };
+      raw.sources[0]!.auth = { type: "exec", command: "/usr/bin/get-token" };
+      expect(() => parseManifest(raw)).toThrow(ManifestError);
+    });
+
+    it("a bare exec command ($PATH lookup)", () => {
+      const raw = baseManifest() as { sources: Record<string, unknown>[] };
+      raw.sources[0]!.auth = { type: "exec", command: "get-token" };
+      expect(() => parseManifest(raw)).toThrow(ManifestError);
+    });
+
     it("the wrong version", () => {
       const raw = baseManifest() as Record<string, unknown>;
       raw.version = 2;
       expect(() => parseManifest(raw)).toThrow(ManifestError);
-    });
-
-    it("empty sources", () => {
-      const raw = baseManifest() as Record<string, unknown>;
-      raw.sources = [];
-      expect(() => parseManifest(raw)).toThrow(/at least one source/);
     });
 
     it("an unknown top-level key", () => {

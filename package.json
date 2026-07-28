@@ -21,6 +21,7 @@
     "test": "vitest run --coverage"
   },
   "dependencies": {
+    "commander": "^12.1.0",
     "yaml": "^2.5.0",
     "zod": "^3.23.8"
   },

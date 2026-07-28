@@ -3,7 +3,12 @@ sources:
   - name: contracts-api
     type: direct
     url: https://mcp.internal.example/contracts
-    auth: oidc
+    auth:
+      type: oauth-client-credentials
+      tokenUrl: https://login.example.com/oauth2/v2.0/token
+      clientId: contracts-agent
+      scope: "api://contracts/.default"
+      assertion: oidc
     headers:
       X-Api-Key: ${env:CONTRACTS_KEY}
   # omits type + auth to exercise defaults (direct / none)
