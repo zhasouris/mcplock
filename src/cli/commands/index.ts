@@ -1,5 +1,6 @@
 import type { CommandRegistrar } from "../run";
 import { addCommand } from "./add";
+import { diffCommand } from "./diff";
 import { initCommand } from "./init";
 import { listCommand } from "./list";
 import { removeCommand } from "./remove";
@@ -13,5 +14,6 @@ export const commandRegistrars: CommandRegistrar[] = [
   removeCommand,
   resolveCommand,
   verifyCommand,
+  diffCommand,
   listCommand,
 ];
