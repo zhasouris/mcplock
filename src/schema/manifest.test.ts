@@ -75,7 +75,38 @@ describe("parseManifest", () => {
     expect(() => parseManifest(raw)).not.toThrow();
   });
 
+  it("accepts the oauth-client-credentials object auth form", () => {
+    const raw = baseManifest() as { sources: Record<string, unknown>[] };
+    raw.sources[0]!.auth = {
+      type: "oauth-client-credentials",
+      tokenUrl: "https://login.example.com/token",
+      clientId: "cid",
+      assertion: "oidc",
+    };
+    expect(() => parseManifest(raw)).not.toThrow();
+  });
+
   describe("rejects", () => {
+    it("an oauth auth object missing tokenUrl", () => {
+      const raw = baseManifest() as { sources: Record<string, unknown>[] };
+      raw.sources[0]!.auth = {
+        type: "oauth-client-credentials",
+        clientId: "cid",
+      };
+      expect(() => parseManifest(raw)).toThrow(ManifestError);
+    });
+
+    it("an oauth auth object with an unknown key", () => {
+      const raw = baseManifest() as { sources: Record<string, unknown>[] };
+      raw.sources[0]!.auth = {
+        type: "oauth-client-credentials",
+        tokenUrl: "https://login.example.com/token",
+        clientId: "cid",
+        oops: true,
+      };
+      expect(() => parseManifest(raw)).toThrow(ManifestError);
+    });
+
     it("the wrong version", () => {
       const raw = baseManifest() as Record<string, unknown>;
       raw.version = 2;

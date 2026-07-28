@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { AuthSpec } from "./config";
 import { AuthError, createAuthProvider, tokenEnvVar } from "./provider";
 
 describe("tokenEnvVar", () => {
@@ -52,14 +53,22 @@ describe("bearer-env provider", () => {
 });
 
 describe("createAuthProvider", () => {
-  it.each(["oauth-client-credentials", "oidc", "exec"])(
-    "rejects the not-yet-implemented %s",
-    (type) => {
-      expect(() => createAuthProvider(type)).toThrow(/not yet implemented/);
-    },
-  );
+  it("builds an oauth provider from the object config", () => {
+    const provider = createAuthProvider({
+      type: "oauth-client-credentials",
+      tokenUrl: "https://login.example.com/token",
+      clientId: "cid",
+    });
+    expect(provider.type).toBe("oauth-client-credentials");
+  });
+
+  it("reserves the oidc shorthand for the object form", () => {
+    expect(() => createAuthProvider("oidc")).toThrow(/reserved/);
+  });
 
   it("rejects an unknown type", () => {
-    expect(() => createAuthProvider("kerberos")).toThrow(/unknown auth type/);
+    expect(() => createAuthProvider("kerberos" as unknown as AuthSpec)).toThrow(
+      /unknown auth type/,
+    );
   });
 });
