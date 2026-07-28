@@ -33,8 +33,9 @@ Valid on every command.
 | `2` | Semantic drift under `--semantic fail` |
 | `3` | Resolution error: source unreachable, auth failure, malformed manifest or lockfile |
 | `64` | Usage error: unknown command, bad flags, missing required argument |
+| `70` | Internal error: an unexpected failure (BSD `EX_SOFTWARE`). Outside the normal outcome set, so a bug never masquerades as a clean/drift result. |
 
-`1` beats `2` when both classes are present in one run.
+`1` beats `2` when both classes are present in one run. A missing tool (locked but no longer live) is treated as a breaking change and exits `1`.
 
 ## 4. Commands
 
@@ -143,11 +144,16 @@ Without `--offline`, includes live drift status per tool.
 
 ```yaml
 version: 1
-sources:
+sources: # may be empty in a freshly `init`-ed manifest
   - name: contracts-api          # unique, [a-z0-9-]+
     type: direct                 # direct | registry (registry reserved)
     url: https://mcp.internal.example/contracts
-    auth: oidc                   # see §7
+    auth:                        # string shorthand OR object — see §8
+      type: oauth-client-credentials
+      tokenUrl: https://login.example.com/oauth2/v2.0/token
+      clientId: contracts-agent
+      scope: "api://contracts/.default"
+      assertion: oidc
     headers:                     # optional escape hatch
       X-Api-Key: ${env:CONTRACTS_KEY}   # ${env:*} interpolation ONLY; literals rejected
 tools:
@@ -159,6 +165,10 @@ codegen:
   output: ./generated
   namespace: acme/agents
 ```
+
+`auth` is either a **string shorthand** (`none`, `bearer-env`, `oidc`) or an
+**object** carrying config (`oauth-client-credentials`, `exec`) — see §8.
+`sources` may be empty (the `init` state); an empty manifest is valid.
 
 ### 5.2 Lockfile — `mcp-tools.lock`
 
@@ -210,6 +220,14 @@ Serialization is deterministic: identical inputs produce byte-identical files.
 
 Consumers must reject unknown `schemaVersion`.
 
+**`changes[]` (implementation note).** Path-level structural changes require the
+*previous* schema, which the lockfile does not store (only `schemaHash`, §5.2).
+So a locked-vs-live comparison (`verify`, `diff`) cannot compute `changes[]`; it
+is emitted empty. `diff` shows class + hash deltas. Populating `changes[]` would
+require storing schemas in the lockfile (a `schemaVersion` bump) or diffing two
+live snapshots — deferred. The field remains in the schema so its later arrival
+is non-breaking.
+
 ## 7. Hashing and fingerprints (normative)
 
 - **Canonicalization:** RFC 8785 (JCS) canonical JSON.
@@ -221,22 +239,38 @@ Guarantees: the same unresolved drift yields the same fingerprint on every run a
 
 ## 8. Authentication
 
-| `auth` | Behaviour |
-|--------|-----------|
-| `none` | Unauthenticated |
-| `bearer-env` | Bearer token from `MCPLOCK_TOKEN_<SOURCE_NAME>` (uppercase, `-`→`_`) |
-| `oauth-client-credentials` | RFC 6749 client credentials against a configured token endpoint. Client secret from env, **or** federated assertion mode (RFC 7523) using an ambient OIDC token — the GitHub-Actions→Entra path. Config: `tokenUrl`, `clientId`, `audience`/`scope`, `assertion: oidc \| env` |
-| `oidc` | Alias for `oauth-client-credentials` in assertion mode with `MCPLOCK_OIDC_AUDIENCE` |
-| `exec` | Run a **repo-relative** command (absolute paths and `$PATH` lookup rejected); it prints `{ "token": "…", "expiresAt": "…" }` on stdout. kubectl exec-credential pattern |
+`auth` is a **string shorthand** or an **object** with a `type` discriminator:
 
-Invariants: credentials never appear in manifest or lockfile; mcplock only ever calls `tools/list` and never invokes tools; token acquisition failures are exit `3` with the provider named.
+| `auth` | Form | Behaviour |
+|--------|------|-----------|
+| `none` | string | Unauthenticated |
+| `bearer-env` | string | Bearer token from `MCPLOCK_TOKEN_<SOURCE_NAME>` (uppercase, `-`→`_`) |
+| `oidc` | string | **Reserved shorthand** — use the `oauth-client-credentials` object with `assertion: oidc`. Errors until implemented. |
+| `oauth-client-credentials` | object | RFC 6749 client credentials. Config: `tokenUrl`, `clientId`, `scope?`, `audience?`, `assertion?`. Three modes: no `assertion` → client secret from `MCPLOCK_CLIENT_SECRET_<SOURCE>`; `assertion: env` → RFC 7523 JWT from `MCPLOCK_OIDC_TOKEN_<SOURCE>`; `assertion: oidc` → ambient GitHub-Actions OIDC token (audience from config or `MCPLOCK_OIDC_AUDIENCE`) — the GitHub-Actions→Entra zero-secret path. |
+| `exec` | object | Run a **repo-relative** command (`command`, `args?`; absolute paths, `$PATH` lookup, and repo-escape rejected); it prints `{ "token": "…", "expiresAt": "…" }` on stdout. kubectl exec-credential pattern. |
+
+Object form:
+
+```yaml
+auth:
+  type: oauth-client-credentials
+  tokenUrl: https://login.example.com/oauth2/v2.0/token
+  clientId: contracts-agent
+  scope: "api://contracts/.default"   # or audience
+  assertion: oidc                     # optional: oidc | env
+```
+
+Invariants: credentials never appear in manifest or lockfile; a fetched token is used only for this source's own `tools/list` and never handed out (a consumer, not a broker); mcplock only ever calls `tools/list` and never invokes tools; token acquisition failures are exit `3` with the source named.
 
 ## 9. Environment variables
 
 | Variable | Purpose |
 |----------|---------|
 | `MCPLOCK_TOKEN_<SOURCE>` | bearer-env tokens |
-| `MCPLOCK_OIDC_AUDIENCE` | Audience for `oidc` auth |
+| `MCPLOCK_CLIENT_SECRET_<SOURCE>` | oauth client secret (no-assertion mode) |
+| `MCPLOCK_OIDC_TOKEN_<SOURCE>` | oauth `assertion: env` JWT |
+| `MCPLOCK_OIDC_AUDIENCE` | Audience for `assertion: oidc` when not set in config |
+| `ACTIONS_ID_TOKEN_REQUEST_URL` / `_TOKEN` | Ambient GitHub-Actions OIDC endpoint (read, not set, by `assertion: oidc`) |
 | `NO_COLOR` | Honored per convention |
 
 ## 10. Reserved for future versions
