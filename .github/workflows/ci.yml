@@ -1,0 +1,34 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build dev image
+        run: docker compose build dev
+      - name: Green-commit gate (typecheck + lint + test + build, in image)
+        run: docker compose run --rm dev sh scripts/ci-verify.sh
+      - name: Shellcheck scripts
+        run: docker compose run --rm dev sh scripts/ci-shellcheck.sh
+
+  # Non-gating stubs — each activates in the phase that produces the code it
+  # exercises (CLAUDE.md). continue-on-error keeps them visible without blocking.
+  mutation:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Stryker mutation testing activates once src/core lands (Phase 1)."
+
+  dast:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "DAST hostile-server suite activates with the MCP client/fixture (Phase 2)."

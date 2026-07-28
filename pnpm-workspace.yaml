@@ -1,0 +1,4 @@
+# Single package today; the workspace exists so examples/ (Phase 4) and any
+# future sibling packages slot in without restructuring.
+packages:
+  - "."

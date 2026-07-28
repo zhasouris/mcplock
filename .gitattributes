@@ -1,0 +1,14 @@
+# Byte-identical output is a tested feature (CLAUDE.md). Force LF everywhere so
+# lockfiles and generated code hash identically on Linux, macOS, and Windows.
+* text=auto eol=lf
+
+*.ts   text eol=lf
+*.js   text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml  text eol=lf
+*.md   text eol=lf
+*.sh   text eol=lf
+
+pnpm-lock.yaml text eol=lf
+*.lock         text eol=lf
