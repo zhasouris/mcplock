@@ -1,5 +1,7 @@
 # mcplock
 
+Your agent has run clean in production for weeks — you haven't touched it. Then it starts reaching for the wrong tool on a task it used to nail, firing calls the server rejects as malformed, or asking for a tool that no longer exists. Nothing in _your_ code has changed; your tests are still green. Upstream, an MCP server has quietly reworded a tool's description, tightened an input schema, or renamed a tool out from under you — no version bump, no changelog, no warning — and your agent swallows the change at runtime, on faith. You burn an afternoon bisecting your own code before it dawns on you that the ground moved. That is what happens when the MCP tooling sands shift beneath your feet: the break lands in front of a user, in the one dependency in your stack you never pinned.
+
 **Lockfiles for MCP tool surfaces.** Pin the tools your agent depends on, verify them in CI, and turn drift into a red build with a diff attached — instead of an agent behaving oddly in front of a user.
 
 ```bash
