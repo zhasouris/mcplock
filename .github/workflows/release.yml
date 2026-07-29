@@ -1,0 +1,104 @@
+name: release
+
+# Cut a GitHub release when a vX.Y.Z tag is pushed (the `release` skill pushes
+# the tag). Builds the npm tarball and standalone Linux/Windows/macOS binaries
+# in the pinned dev image, then publishes the release with generated notes.
+# npm publish is optional and runs only when the NPM_TOKEN secret is set.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing vX.Y.Z tag to (re)build a release for
+        required: true
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - name: Build dev image
+        run: docker compose build dev
+      - name: Green-commit gate
+        run: docker compose run --rm dev sh scripts/ci-verify.sh
+
+  artifacts:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - name: Build dev image
+        run: docker compose build dev
+      - name: Build release artifacts
+        run: docker compose run --rm dev sh scripts/release-build.sh
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: dist-release/*
+          if-no-files-found: error
+
+  release:
+    needs: artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: dist-release
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: dist-release/*
+
+  npm:
+    needs: verify
+    runs-on: ubuntu-latest
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - name: Skip when NPM_TOKEN is absent
+        if: env.NPM_TOKEN == ''
+        run: echo "NPM_TOKEN not set — skipping npm publish (the GitHub release still ships)."
+      - uses: actions/checkout@v7
+        if: env.NPM_TOKEN != ''
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: pnpm/action-setup@v4
+        if: env.NPM_TOKEN != ''
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        if: env.NPM_TOKEN != ''
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+      - name: Install and build
+        if: env.NPM_TOKEN != ''
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+      - name: Publish to npm (with provenance)
+        if: env.NPM_TOKEN != ''
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -39,7 +39,14 @@ const determinismRules = {
 
 export default tseslint.config(
   {
-    ignores: ["dist/", "coverage/", "node_modules/", ".stryker-tmp/"],
+    ignores: [
+      "dist/",
+      "dist-bin/",
+      "dist-release/",
+      "coverage/",
+      "node_modules/",
+      ".stryker-tmp/",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

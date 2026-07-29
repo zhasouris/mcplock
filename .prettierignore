@@ -1,4 +1,6 @@
 dist/
+dist-bin/
+dist-release/
 coverage/
 node_modules/
 .pnpm-store/
