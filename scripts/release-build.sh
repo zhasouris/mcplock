@@ -14,6 +14,10 @@ mkdir -p "$out" dist-bin
 version=$(node -p "require('./package.json').version")
 echo "building mcplock $version artifacts"
 
+# 0) deps — the mounted node_modules volume is empty on a fresh CI runner,
+# so install first (same as scripts/ci-verify.sh)
+pnpm install --frozen-lockfile
+
 # 1) npm build + tarball
 pnpm build
 pnpm pack --pack-destination "$out"
