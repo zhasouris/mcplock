@@ -44,7 +44,7 @@ export const LockfileSchema = z
   .object({
     schemaVersion: z.literal(1),
     generatedBy: z.string().min(1, "generatedBy is required"),
-    tools: z.record(LockedToolSchema),
+    tools: z.record(z.string(), LockedToolSchema),
   })
   .strict();
 
