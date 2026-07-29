@@ -39,7 +39,7 @@ const SourceSchema = z
     type: SourceType.default("direct"),
     url: z.string().url("source url must be a valid URL"),
     auth: AuthSpecSchema.default("none"),
-    headers: z.record(HeaderValue).optional(),
+    headers: z.record(z.string(), HeaderValue).optional(),
   })
   .strict();
 

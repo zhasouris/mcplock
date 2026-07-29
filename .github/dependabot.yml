@@ -6,6 +6,12 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    ignore:
+      # @types/node tracks the Node runtime we target (engines: node >=20).
+      # Keep it on the 20.x line rather than jumping to a newer major, which
+      # would type against APIs not present in the runtime we build for.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       production:
         dependency-type: production
