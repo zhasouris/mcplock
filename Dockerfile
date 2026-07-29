@@ -2,9 +2,11 @@
 # Base: node:20-bookworm-slim, pinned by digest. Bump deliberately, never float.
 FROM node@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0
 
-# shellcheck lints scripts/ (CLAUDE.md); ca-certificates for TLS to registries.
+# shellcheck lints scripts/ (CLAUDE.md); ca-certificates for TLS to registries;
+# zip packs the Windows release archive.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends shellcheck ca-certificates \
+  && apt-get install -y --no-install-recommends \
+    shellcheck ca-certificates zip \
   && rm -rf /var/lib/apt/lists/*
 
 # pnpm via npm rather than corepack — robust against corepack signature-key

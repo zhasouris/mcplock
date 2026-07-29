@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Windows installer for mcplock, built with WiX v5 on a Windows runner
+  (.github/workflows/release.yml, the `windows-msi` job). Installs mcplock.exe
+  into "C:\Program Files\mcplock\" (per-machine) and adds it to the system PATH.
+
+  - Version arrives via `wix build -d Version=X.Y.Z`.
+  - mcplock.exe is supplied via the bind path `-b packaging/windows` (the binary
+    is downloaded there from the Linux release build, so the MSI wraps the exact
+    same executable that ships in the .zip).
+  - UpgradeCode is a fixed GUID so a newer version upgrades the old one.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="mcplock" Manufacturer="mcplock"
+           Version="$(var.Version)"
+           UpgradeCode="d6f4a3b2-1e5c-4a7b-9c3d-8e2f1a0b6c5d"
+           Scope="perMachine" Compressed="yes">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of mcplock is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="mcplock">
+        <Component Id="MainExecutable" Bitness="always64">
+          <File Id="mcplockExe" Name="mcplock.exe" Source="mcplock.exe" KeyPath="yes" />
+          <!-- Add the install dir to the system PATH; removed on uninstall. -->
+          <Environment Id="Path" Name="PATH" Value="[INSTALLFOLDER]"
+                       Part="last" Action="set" System="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="Main">
+      <ComponentRef Id="MainExecutable" />
+    </Feature>
+  </Package>
+</Wix>

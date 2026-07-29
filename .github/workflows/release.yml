@@ -46,7 +46,7 @@ jobs:
       - name: Build release artifacts
         run: docker compose run --rm dev sh scripts/release-build.sh
       - name: Normalize artifact ownership (the dev image writes as root)
-        run: sudo chown -R "$(id -u):$(id -g)" dist-release
+        run: sudo chown -R "$(id -u):$(id -g)" dist-release dist-bin
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -54,6 +54,46 @@ jobs:
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: dist-release/*
+      - name: Hand the Windows binary to the MSI job
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcplock-win-exe
+          path: dist-bin/stage/windows-x64/mcplock.exe
+          if-no-files-found: error
+
+  windows-msi:
+    needs: release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - name: Download the Windows binary (built on Linux)
+        uses: actions/download-artifact@v4
+        with:
+          name: mcplock-win-exe
+          path: packaging/windows
+      - name: Resolve version
+        id: v
+        shell: bash
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Install WiX
+        run: dotnet tool install --global wix
+      - name: Put the dotnet tools dir on PATH
+        shell: pwsh
+        run: Add-Content -Path $env:GITHUB_PATH -Value "$env:USERPROFILE\.dotnet\tools"
+      - name: Build the MSI
+        shell: pwsh
+        run: >
+          wix build packaging/windows/mcplock.wxs
+          -arch x64 -b packaging/windows
+          -d Version=${{ steps.v.outputs.version }}
+          -o "mcplock-${{ steps.v.outputs.version }}-x64.msi"
+      - name: Attach the MSI to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          files: mcplock-*-x64.msi
 
   npm:
     needs: verify
