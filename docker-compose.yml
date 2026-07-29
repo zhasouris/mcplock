@@ -11,11 +11,15 @@ services:
     environment:
       - CI=true
       - NPM_CONFIG_STORE_DIR=/pnpm-store
+      # Persist the npm/npx cache so live-test server downloads are cached.
+      - npm_config_cache=/npm-cache
     volumes:
       - .:/app
       - mcplock_node_modules:/app/node_modules
       - mcplock_pnpm_store:/pnpm-store
+      - mcplock_npm_cache:/npm-cache
 
 volumes:
   mcplock_node_modules:
   mcplock_pnpm_store:
+  mcplock_npm_cache:
