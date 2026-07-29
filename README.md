@@ -90,6 +90,44 @@ Prefer monitoring before gating? The companion action's `fail-on: none` + `creat
 
 v1: streamable HTTP servers. stdio resolution is deliberately excluded — verifying a stdio server means executing it, and a command pin names whatever happens to be installed on the current machine rather than a stable shared artifact. A package-pinned stdio mode is on the roadmap; a dishonest one is not.
 
+## Tests
+
+Everything runs in the pinned Docker image — no host toolchain required. The whole gate is one command, and CI runs the same one on every push:
+
+```bash
+docker compose run --rm dev sh scripts/ci-verify.sh   # typecheck + lint + tests+coverage + build
+```
+
+### Hermetic suite (default — no network)
+
+24 files, 263 tests, ~99% line coverage against an **82% CI floor** (the frozen core aims at 90%). Nothing touches a real network or a real MCP server:
+
+- **In-process fixture server** (`test/mcp/fixture-server.ts`) — scriptable and mutable *mid-test*. That is how every drift class is produced and asserted: script a tool set, pin it, mutate a schema or a description, assert the exact drift class (`structural` / `semantic` / `missing` / `undeclared` / `clean`) and exit code.
+- **DAST-style hostile responses** — fault knobs (`delay`, `malformed`, `sse`, `statusOverride`, `listError`) drive the client against malformed/oversized/slow `tools/list` payloads; it must fail cleanly with the source named, never hang or leak.
+- **Auth flows** run against a mock OAuth / GitHub-OIDC server (`test/auth/mock-oauth-server.ts`); secrets are asserted absent from lockfiles, reports, and logs.
+- **Determinism is under test** — the clock/entropy port is injected, so lockfiles and fingerprints are byte-identical across runs.
+
+### Live suite (opt-in — real MCP servers)
+
+Gated behind `MCPLOCK_LIVE=1` and **skipped by default**. Each test spins up a genuine MCP server over streamable-HTTP and runs `mcplock` end-to-end:
+
+| Test | What it proves |
+|------|----------------|
+| [`everything-drift.live.test.ts`](test/live/everything-drift.live.test.ts) | Pins `server-everything` @ `2025.7.1`, verifies against `2026.7.4` → `structural` + `missing` + `undeclared` drift, exit `1`, stable fingerprints across runs. |
+| [`everything-semantic.live.test.ts`](test/live/everything-semantic.live.test.ts) | `echo`'s description is reworded between `2025.8.18` → `2026.1.14` with the schema **byte-identical** → classified `semantic`; `--semantic warn\|fail\|ignore` exit codes honored. |
+| [`cli-lifecycle.live.test.ts`](test/live/cli-lifecycle.live.test.ts) | Full lifecycle against a real server: `init → add → why → list → verify → resolve --frozen → diff → update → remove`. |
+| [`cross-server.live.test.ts`](test/live/cross-server.live.test.ts) | A second server (`server-memory`, 9 tools) bridged stdio→HTTP via supergateway — transport, pagination, and protocol conformance the fixture can't reproduce. |
+
+### Smoke runner
+
+[`scripts/live-smoke.ps1`](scripts/live-smoke.ps1) runs the entire live suite in Docker with a single command (PowerShell) — it builds the dev image, sets `MCPLOCK_LIVE=1`, and executes the four live tests with coverage and file-parallelism off:
+
+```powershell
+./scripts/live-smoke.ps1
+```
+
+A fast confidence check that the CLI still behaves against real, shifting servers. Last run: **4/4 pass, ~25s**.
+
 ## License
 
 MIT
