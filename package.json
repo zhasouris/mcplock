@@ -1,6 +1,6 @@
 {
   "name": "mcplock",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Lockfiles for MCP tool surfaces.",
   "license": "MIT",
   "repository": {
