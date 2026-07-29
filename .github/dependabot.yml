@@ -1,0 +1,21 @@
+version: 2
+updates:
+  # App dependencies (pnpm; Dependabot reads pnpm-lock.yaml under the npm ecosystem).
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      production:
+        dependency-type: production
+        update-types: [minor, patch]
+      development:
+        dependency-type: development
+        update-types: [minor, patch]
+
+  # Keep the GitHub Actions we pin (checkout, codeql-action, …) current.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
