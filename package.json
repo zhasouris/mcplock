@@ -21,20 +21,25 @@
     "test": "vitest run --coverage"
   },
   "dependencies": {
-    "commander": "^12.1.0",
+    "commander": "^15.0.0",
     "yaml": "^2.5.0",
     "zod": "^3.23.8"
+  },
+  "pnpm": {
+    "overrides": {
+      "vite": ">=6.4.3 <7"
+    }
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",
     "@types/node": "^20.16.0",
-    "@vitest/coverage-v8": "^2.1.0",
+    "@vitest/coverage-v8": "^3.2.6",
     "eslint": "^9.13.0",
-    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.3.0",
     "tsup": "^8.3.0",
     "typescript": "^5.6.0",
     "typescript-eslint": "^8.10.0",
-    "vitest": "^2.1.0"
+    "vitest": "^3.2.6"
   }
 }

@@ -15,7 +15,7 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build dev image
         run: docker compose build dev
       - name: Green-commit gate (typecheck + lint + test+coverage + build)
@@ -28,12 +28,12 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: echo "Stryker mutation testing — planned; will gate src/core once wired."
 
   dast:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: echo "DAST hostile-server suite — planned; uses the fixture fault knobs."
