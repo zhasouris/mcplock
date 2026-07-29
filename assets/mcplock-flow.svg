@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300" width="800" height="300" role="img" aria-labelledby="title desc" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+  <title id="title">mcplock process flow</title>
+  <desc id="desc">A four-step pipeline: declare your tools, resolve to pin them into a lockfile, verify in CI, and drift is caught as a red build with a diff. A single pulse walks left to right and ends on the red "drift caught" step.</desc>
+  <style>
+    svg{--bg:#141319;--card:#1c1b24;--bd:#33323f;--bd2:#454452;--tp:#ECEBF4;--ts:#A9A7B8;--tm:#6f6e7d;--acc:#AFA9EC;--red:#E8615F;--redbd:#8f3130;--redbg:#2a1616;}
+    .bg{fill:var(--bg);stroke:var(--bd);stroke-width:1;}
+    .brand{fill:var(--acc);font-size:17px;font-weight:700;letter-spacing:.3px;}
+    .brandsub{fill:var(--tm);font-size:12px;}
+    .arrows path{fill:var(--bd2);stroke:var(--bd2);stroke-width:2;}
+    .node rect{fill:var(--card);stroke:var(--bd);stroke-width:1.5;}
+    .nt{fill:var(--tp);font-size:15px;font-weight:600;text-anchor:middle;}
+    .ns{fill:var(--tm);font-size:11px;text-anchor:middle;}
+    .glow{fill:none;stroke:var(--acc);stroke-width:2;opacity:.12;}
+    .n4 rect:first-child{stroke:var(--redbd);}
+    .n4 .nt{fill:var(--red);}
+    .glow.g4{stroke:var(--red);}
+    .card rect{fill:var(--redbg);stroke:var(--redbd);stroke-width:1.5;}
+    .cardstem{stroke:var(--redbd);stroke-width:1.5;fill:none;}
+    .ctitle{fill:var(--red);font-size:12px;font-weight:700;}
+    .dminus{fill:#5a2a2a;}
+    .dplus{fill:#264b3e;}
+    .cnote{fill:var(--ts);font-size:10px;}
+    .halo{fill:var(--acc);opacity:.18;}
+    .dot{fill:var(--acc);}
+    .pulse{transform:translateX(630px);}
+    .cap{fill:var(--ts);font-size:12.5px;text-anchor:middle;}
+    .wipe{fill:var(--bg);opacity:0;}
+    @media (prefers-reduced-motion: no-preference){
+      .pulse{animation:travel 8.5s infinite;}
+      .g1{animation:glow1 8.5s infinite;}
+      .g2{animation:glow2 8.5s infinite;}
+      .g3{animation:glow3 8.5s infinite;}
+      .g4{animation:glow4 8.5s infinite;}
+      .card{animation:cardIn 8.5s infinite;}
+      .n4 .nt{animation:n4title 8.5s infinite;}
+      .wipe{animation:wipe 8.5s infinite;}
+    }
+    @keyframes travel{0%,9%{transform:translateX(0)}21%,30%{transform:translateX(210px)}42%,51%{transform:translateX(420px)}63%,100%{transform:translateX(630px)}}
+    @keyframes glow1{0%,9%{opacity:1}15%,100%{opacity:.1}}
+    @keyframes glow2{0%,19%{opacity:.1}21%,30%{opacity:1}36%,100%{opacity:.1}}
+    @keyframes glow3{0%,40%{opacity:.1}42%,51%{opacity:1}57%,100%{opacity:.1}}
+    @keyframes glow4{0%,61%{opacity:.1}63%,100%{opacity:1}}
+    @keyframes n4title{0%,61%{fill:var(--tm)}63%,100%{fill:var(--red)}}
+    @keyframes cardIn{0%,66%{opacity:0;transform:translateY(6px)}78%,100%{opacity:1;transform:translateY(0)}}
+    @keyframes wipe{0%{opacity:1}6%{opacity:0}93%{opacity:0}100%{opacity:1}}
+  </style>
+
+  <rect class="bg" x="0.5" y="0.5" width="799" height="299" rx="14"/>
+
+  <text class="brand" x="24" y="34">mcplock</text>
+  <text class="brandsub" x="98" y="34">· how a schema change gets caught</text>
+
+  <g class="arrows">
+    <path d="M156 124 H222"/><path d="M156 124 l-6 -4 v8 z" transform="translate(72,0)"/>
+    <path d="M366 124 H432"/><path d="M366 124 l-6 -4 v8 z" transform="translate(72,0)"/>
+    <path d="M576 124 H642"/><path d="M576 124 l-6 -4 v8 z" transform="translate(72,0)"/>
+  </g>
+
+  <g class="node">
+    <rect x="15" y="90" width="140" height="68" rx="10"/>
+    <text class="nt" x="85" y="120">declare</text>
+    <text class="ns" x="85" y="140">mcp-tools.yaml</text>
+    <rect class="glow g1" x="15" y="90" width="140" height="68" rx="10"/>
+  </g>
+  <g class="node">
+    <rect x="225" y="90" width="140" height="68" rx="10"/>
+    <text class="nt" x="295" y="120">resolve</text>
+    <text class="ns" x="295" y="140">pin &#8594; .lock</text>
+    <rect class="glow g2" x="225" y="90" width="140" height="68" rx="10"/>
+  </g>
+  <g class="node">
+    <rect x="435" y="90" width="140" height="68" rx="10"/>
+    <text class="nt" x="505" y="120">verify</text>
+    <text class="ns" x="505" y="140">re-check in CI</text>
+    <rect class="glow g3" x="435" y="90" width="140" height="68" rx="10"/>
+  </g>
+  <g class="node n4">
+    <rect x="645" y="90" width="140" height="68" rx="10"/>
+    <text class="nt" x="715" y="120">drift caught</text>
+    <text class="ns" x="715" y="140">red build + diff</text>
+    <rect class="glow g4" x="645" y="90" width="140" height="68" rx="10"/>
+  </g>
+
+  <g class="card">
+    <path class="cardstem" d="M715 158 V182"/>
+    <rect x="645" y="182" width="140" height="70" rx="8"/>
+    <text class="ctitle" x="659" y="205">&#10007; red build</text>
+    <rect class="dminus" x="659" y="216" width="112" height="9" rx="2"/>
+    <rect class="dplus" x="659" y="230" width="90" height="9" rx="2"/>
+    <text class="cnote" x="659" y="249">echo &#183; schema drift</text>
+  </g>
+
+  <g class="pulse">
+    <circle class="halo" cx="85" cy="124" r="15"/>
+    <circle class="dot" cx="85" cy="124" r="6"/>
+  </g>
+
+  <text class="cap" x="400" y="290">Upstream drift becomes a red build in CI &#8212; not a production surprise.</text>
+
+  <rect class="wipe" x="0" y="0" width="800" height="300" rx="14"/>
+</svg>

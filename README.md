@@ -13,6 +13,10 @@ npx mcplock resolve      # pin + generate a typed client
 npx mcplock verify       # in CI: fail if the surface moved
 ```
 
+<p align="center">
+  <img src="assets/mcplock-flow.svg" width="760" alt="mcplock process flow: declare → resolve → verify → drift caught as a red build with a diff" />
+</p>
+
 ---
 
 ## The problem
