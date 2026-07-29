@@ -34,7 +34,7 @@ jobs:
       - name: Green-commit gate
         run: docker compose run --rm dev sh scripts/ci-verify.sh
 
-  artifacts:
+  release:
     needs: verify
     runs-on: ubuntu-latest
     steps:
@@ -45,22 +45,8 @@ jobs:
         run: docker compose build dev
       - name: Build release artifacts
         run: docker compose run --rm dev sh scripts/release-build.sh
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-artifacts
-          path: dist-release/*
-          if-no-files-found: error
-
-  release:
-    needs: artifacts
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: release-artifacts
-          path: dist-release
+      - name: Normalize artifact ownership (the dev image writes as root)
+        run: sudo chown -R "$(id -u):$(id -g)" dist-release
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
