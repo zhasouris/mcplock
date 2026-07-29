@@ -46,6 +46,7 @@ export default tseslint.config(
       "coverage/",
       "node_modules/",
       ".stryker-tmp/",
+      "packaging/",
     ],
   },
   js.configs.recommended,
