@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { systemClock } from "../core/clock";
 import { ManifestError } from "../schema/manifest";
+import { VERSION } from "../version";
 import { ExitError } from "./errors";
 import {
   DEFAULT_LOCKFILE,
@@ -45,7 +46,7 @@ describe("built-in behaviour", () => {
     const io = fakeIo();
     const code = await run(["--version"], io);
     expect(code).toBe(0);
-    expect(io.stdout.join("")).toContain("0.0.0");
+    expect(io.stdout.join("")).toContain(VERSION);
   });
 });
 
