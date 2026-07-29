@@ -24,8 +24,9 @@ pnpm install --frozen-lockfile
 pnpm build
 pnpm pack --pack-destination "$out"
 
-# 2) self-contained CJS bundle (deps inlined) for the binary packager
-pnpm exec esbuild src/index.ts \
+# 2) self-contained CJS bundle (deps inlined) for the binary packager;
+# src/bin.ts is the executable entry that actually runs the CLI
+pnpm exec esbuild src/bin.ts \
   --bundle --platform=node --target=node20 --format=cjs \
   --outfile=dist-bin/mcplock.cjs
 

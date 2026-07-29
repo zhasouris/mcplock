@@ -7,7 +7,9 @@ export default defineConfig({
       provider: "v8",
       // Product code only; test/ holds fixtures/infra, not counted.
       include: ["src/**/*.ts"],
-      exclude: ["src/**/*.test.ts"],
+      // bin.ts is the shebang launcher — a trivial process shim whose logic
+      // (cli.ts, run.ts) is unit-tested; it can't run under vitest.
+      exclude: ["src/**/*.test.ts", "src/bin.ts"],
       reporter: ["text", "lcov"],
       // Floor per CLAUDE.md; the frozen core aims at 90% (raised as it lands).
       thresholds: {
