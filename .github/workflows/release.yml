@@ -55,7 +55,7 @@ jobs:
           fail_on_unmatched_files: true
           files: dist-release/*
       - name: Hand the Windows binary to the MSI job
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mcplock-win-exe
           path: dist-bin/stage/windows-x64/mcplock.exe
